@@ -1,4 +1,4 @@
-package com.rubahapi.moviedb.main.fragment.movie
+package com.rubahapi.moviedb.mainnavigator.fragment.favorite.favoritemovie
 
 import android.content.ContentValues.TAG
 import android.support.v4.app.Fragment
@@ -13,10 +13,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
-class MoviePresenter(private val view: MovieView,
-                     private val apiRepository: ApiRepository,
-                     private val gson: Gson
-                     ): MoviePresenterView<MovieFragment> {
+class FavoriteMoviePresenter(private val view: FavoriteMovieView,
+                             private val apiRepository: ApiRepository,
+                             private val gson: Gson
+                     ): FavoriteMoviePresenterView<FavoriteMovieFragment> {
     private var mView: Fragment? = null
 
     private val handler = CoroutineExceptionHandler { _, exception ->
@@ -36,7 +36,7 @@ class MoviePresenter(private val view: MovieView,
         }
     }
 
-    override fun onAttach(view: MovieFragment) {
+    override fun onAttach(view: FavoriteMovieFragment) {
         mView = view
     }
 

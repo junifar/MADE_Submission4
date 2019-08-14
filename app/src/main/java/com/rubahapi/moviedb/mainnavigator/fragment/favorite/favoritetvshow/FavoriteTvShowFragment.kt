@@ -1,12 +1,9 @@
-package com.rubahapi.moviedb.main.fragment.movie
+package com.rubahapi.moviedb.main.fragment.tvshow
 
 
-import android.app.Activity.RESULT_OK
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.support.v4.app.Fragment
-import android.support.v4.content.ContextCompat
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -14,21 +11,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
-import android.widget.Toast
 import com.google.gson.Gson
 import com.rubahapi.moviedb.DetailMovieActivity
 import com.rubahapi.moviedb.R
-import com.rubahapi.moviedb.adapter.MovieAdapter
+import com.rubahapi.moviedb.adapter.TvShowAdapter
 import com.rubahapi.moviedb.api.ApiRepository
-import com.rubahapi.moviedb.model.Movie
+import com.rubahapi.moviedb.db.MovieHelper
+import com.rubahapi.moviedb.model.TvShow
 import com.rubahapi.moviedb.util.invisible
 import com.rubahapi.moviedb.util.visible
 
-class MovieFragment : Fragment(), MovieView {
-    private var items: ArrayList<Movie> = arrayListOf()
-    private lateinit var adapter: MovieAdapter
+class FavoriteTvShowFragment : Fragment(), FavoriteTVShowView {
+    private var items: ArrayList<TvShow> = arrayListOf()
+    private lateinit var adapter: TvShowAdapter
     private lateinit var progressBar: ProgressBar
-    private lateinit var presenter: MoviePresenter
+    private lateinit var presenter: FavoriteTvShowPresenter
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var list:RecyclerView
 
@@ -37,44 +34,69 @@ class MovieFragment : Fragment(), MovieView {
         outState.putParcelableArrayList(ITEM_DATA_SAVED, items)
     }
 
+    private fun getTvShowDB():List<TvShow>{
+        val database = MovieHelper(this.requireContext())
+        val movieHelper = database.getInstance(this.requireContext())
+        movieHelper.open()
+        val result = movieHelper.getAllTvShow()
+        movieHelper.close()
+        println(result)
+        return result
+    }
+
+    override fun onResume() {
+        val result = getTvShowDB()
+        if (result == null){
+            var data = mutableListOf<TvShow>()
+            data.add(TvShow(0,"No Data Show","",""))
+            showTvShow(data)
+        }else{
+            showTvShow(result)
+        }
+        super.onResume()
+    }
+
     private fun initComponent(savedInstanceState: Bundle?){
+        val request = ApiRepository()
+        val gson = Gson()
         progressBar = activity?.findViewById(R.id.progressBar) as ProgressBar
         swipeRefresh = activity?.findViewById(R.id.swipe_refresh_layout) as SwipeRefreshLayout
-
-        swipeRefresh.setColorSchemeColors(ContextCompat.getColor(context!!, android.R.color.holo_green_dark))
-
-        val context = this.context
-        if(context != null){
-            adapter = MovieAdapter(context, items){
-                val intent = Intent(activity, DetailMovieActivity::class.java)
-                intent.putExtra(
-                    DetailMovieActivity.EXTRA_DETAIL_ACTIVITY_TYPE,
-                    DetailMovieActivity.EXTRA_DETAIL_MOVIE
-                )
-                intent.putExtra(DetailMovieActivity.EXTRA_DETAIL_MOVIE, it)
-                startActivity(intent)
-            }
+        adapter = TvShowAdapter(context!!, items){
+            val intent = Intent(activity, DetailMovieActivity::class.java)
+            intent.putExtra(
+                DetailMovieActivity.EXTRA_DETAIL_ACTIVITY_TYPE,
+                DetailMovieActivity.EXTRA_DETAIL_TV_SHOW
+            )
+            intent.putExtra(DetailMovieActivity.EXTRA_DETAIL_TV_SHOW, it)
+            startActivity(intent)
         }
         list.adapter = adapter
 
-        val request = ApiRepository()
-        val gson = Gson()
-        presenter = MoviePresenter(this, request, gson)
+        presenter = FavoriteTvShowPresenter(this, request, gson)
         onAttachView()
 
-        if (savedInstanceState == null){
-            presenter.getMovie()
+        if(savedInstanceState == null){
+//            this.context?.let { presenter.getTvShow(it) }
+            val result = getTvShowDB()
+            if (result == null){
+                var data = mutableListOf<TvShow>()
+                data.add(TvShow(0,"No Data Show","",""))
+                showTvShow(data)
+            }else{
+                showTvShow(result)
+            }
         }else{
             items.clear()
-            savedInstanceState.getParcelableArrayList<Movie>(ITEM_DATA_SAVED).forEach {
-                movie ->
-                items.add(movie)
+            savedInstanceState.getParcelableArrayList<TvShow>(ITEM_DATA_SAVED).forEach {
+                tvShow->
+                items.add(tvShow)
             }
             adapter.notifyDataSetChanged()
         }
 
         swipeRefresh.setOnRefreshListener {
-            presenter.getMovie()
+            val result = getTvShowDB()
+            showTvShow(result)
             swipeRefresh.isRefreshing = false
         }
     }
@@ -93,14 +115,12 @@ class MovieFragment : Fragment(), MovieView {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
-        val view = inflater.inflate(R.layout.fragment_movie, container, false)
-        list = view.findViewById(R.id.recycler_view_movie)
+        val view = inflater.inflate(R.layout.fragment_tv_show, container, false)
+        list = view.findViewById(R.id.recycler_view_tv_show)
 
         list.layoutManager = LinearLayoutManager(context)
 
         return view
-
     }
 
     override fun showLoading() {
@@ -119,7 +139,7 @@ class MovieFragment : Fragment(), MovieView {
         presenter.onDetach()
     }
 
-    override fun showMovie(data: List<Movie>) {
+    override fun showTvShow(data: List<TvShow>) {
         swipeRefresh.isRefreshing = false
         items.clear()
         items.addAll(data)
@@ -129,10 +149,12 @@ class MovieFragment : Fragment(), MovieView {
     companion object{
         const val ITEM_DATA_SAVED = "itemsData"
         @JvmStatic
-        fun newInstance(): MovieFragment {
-            return MovieFragment().apply {
+        fun newInstance(): FavoriteTvShowFragment {
+            return FavoriteTvShowFragment().apply {
                 arguments = Bundle().apply {}
             }
         }
+
     }
+
 }
